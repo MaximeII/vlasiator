@@ -49,7 +49,6 @@ void velocitySpaceDiffusion(
         dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,const uint popID){
 
     const auto LocalCells=getLocalCells();
-    #pragma omp parallel for
     for (int CellIdx = 0; CellIdx < LocalCells.size(); CellIdx++) { //Iterate through spatial cell
 
         auto CellID                        = LocalCells[CellIdx];
@@ -106,6 +105,7 @@ void velocitySpaceDiffusion(
 
             phiprof::start("fmu building");
             // Build 2d array of f(v,mu)
+            #pragma omp parallel for
             for (vmesh::LocalID n=0; n<cell.get_number_of_velocity_blocks(popID); n++) { // Iterate through velocity blocks
                 for (uint k = 0; k < WID; ++k) for (uint j = 0; j < WID; ++j) for (uint i = 0; i < WID; ++i) { // Iterate through coordinates (z,y,x)
 
@@ -146,11 +146,14 @@ void velocitySpaceDiffusion(
 
                    Realf CellValue  = cell.get_data(n,popID)[i+WID*j+WID*WID*k];
 
+                   #pragma omp critical
+                   {
                    Vcount_array .at(WID3*n+i+WID*j+WID*WID*k) = Vcount;
                    mucount_array.at(WID3*n+i+WID*j+WID*WID*k) = mucount;
 
                    fmu   .at(Vcount).at(mucount) += 2.0 * M_PI * Vmu*Vmu * CellValue;
                    fcount.at(Vcount).at(mucount) += 1;
+                   }
                    
                 } // End coordinates
             } // End blocks
@@ -218,6 +221,7 @@ void velocitySpaceDiffusion(
 
             phiprof::start("diffusion time derivative");
             // Compute dfdt
+            #pragma omp parallel for
             for (vmesh::LocalID n=0; n<cell.get_number_of_velocity_blocks(popID); n++) { // Iterate through velocity blocks             
                 for (uint k = 0; k < WID; ++k) for (uint j = 0; j < WID; ++j) for (uint i = 0; i < WID; ++i) {
                 
@@ -248,6 +252,7 @@ void velocitySpaceDiffusion(
 
             phiprof::start("update cell");
             //Loop to update cell
+            #pragma omp parallel for
             for (vmesh::LocalID n=0; n<cell.get_number_of_velocity_blocks(popID); n++) { //Iterate through velocity blocks
                 for (uint k = 0; k < WID; ++k) for (uint j = 0; j < WID; ++j) for (uint i = 0; i < WID; ++i) {
                     const Real* parameters  = cell.get_block_parameters(popID);
