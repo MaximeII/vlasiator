@@ -82,6 +82,7 @@ void velocitySpaceDiffusion(
         std::vector<std::vector<Realf>> dfdmu2 (nbins_v,std::vector<Realf>(nbins_mu));  // Array to store dfdmumu
         std::vector<std::vector<Realf>> dfdt_mu(nbins_v,std::vector<Realf>(nbins_mu));  // Array to store dfdt_mu
 
+        std::array<Realf,3> bulkV = {cell.parameters[CellParams::VX], cell.parameters[CellParams::VY], cell.parameters[CellParams::VZ]};
 
         while (dtTotalDiff < Parameters::dt) { // Substep loop
 
@@ -124,7 +125,6 @@ void velocitySpaceDiffusion(
                    const Real DV 
                       = parameters[n * BlockParams::N_VELOCITY_BLOCK_PARAMS + BlockParams::DVX];
   
-                   std::array<Realf,3> bulkV = {cell.parameters[CellParams::VX], cell.parameters[CellParams::VY], cell.parameters[CellParams::VZ]};
                    std::array<Realf,3> Vplasma; // Velocity in the cell, in the plasma frame
 
                    for (int indx = 0; indx < 3; indx++) { Vplasma.at(indx) = (V.at(indx) - bulkV.at(indx)); }
