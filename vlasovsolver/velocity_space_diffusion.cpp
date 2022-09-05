@@ -66,6 +66,8 @@ void velocitySpaceDiffusion(
         int nbins_v  = Parameters::PADvbins;
         int nbins_mu = Parameters::PADmubins;
 
+        const int max_mu_size = 256 * 256; // Compile time constant for vector instructions
+
         Realf mumin   = -1.0;
         Realf mumax   = +1.0;
         Realf dmubins = (mumax - mumin)/nbins_mu;
@@ -161,11 +163,31 @@ void velocitySpaceDiffusion(
                    Vcount .store(&Vcount_array .at(WID3*n+WID*j+WID*WID*k));
                    mucount.store(&mucount_array.at(WID3*n+WID*j+WID*WID*k));
 
-                   for (uint i = 0; i<WID; i++) {
-                       fmu   .at(Vcount[i]).at(mucount[i]) += 2.0 * M_PI * Vmu[i]*Vmu[i] * CellValue[i];
-                       fcount.at(Vcount[i]).at(mucount[i]) += 1;
+                   Vec4q mu_space_Qindx = extend_low(Vec8i(Vcount * dmubins + mucount,0)); // Converts mu_space coords into memory offset                   
+                   Vec4i mu_space_Iindx = Vcount * dmubins + mucount; // Agner vectorclass KEKW
+
+                   Vec4d fmu_values = lookup<max_mu_size>(mu_space_Qindx,(double const*) &fmu.at(0).at(0)); // Gather fmu values for all vectors
+                   Vec4i fcount_values = lookup<max_mu_size>(mu_space_Iindx,(void const*) &fcount.at(0).at(0));
+
+                   Vec4d delta_fmu    = 2.0 * M_PI * Vmu*Vmu * CellValue;
+                   Vec4i delta_fcount = 1;
+
+                   for (int a = 0; a < WID; a++) {        // Making sure mu space location dont collide
+                       for (int b = a+1; b < WID; b++) {
+                           if( mu_space_Iindx[a] == mu_space_Iindx[b] ) { 
+                               mu_space_Iindx.insert(a,-1);
+                               mu_space_Qindx.insert(a,-1);
+                               delta_fmu.insert(b,delta_fmu[a]+delta_fmu[b]); 
+                               delta_fcount.insert(b,delta_fcount[a]+delta_fcount[b]); }
+                       }
                    }
-                   
+
+                   fmu_values    += delta_fmu;
+                   fcount_values += delta_fcount;
+
+                   scatter(mu_space_Qindx, max_mu_size, fmu_values, (double*) &fmu.at(0).at(0));
+                   scatter(mu_space_Iindx, max_mu_size, fcount_values, (void*) &fcount.at(0).at(0));            
+
                 } // End coordinates
             } // End blocks
             phiprof::stop("fmu building");
