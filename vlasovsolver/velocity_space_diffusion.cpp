@@ -279,7 +279,12 @@ void velocitySpaceDiffusion(
 
                    Vec4d Vmu = dVbins * (to_double(Vindex)+0.5);
 
-                   for (uint i = 0; i < WID; i++) {dfdt[WID3*n+i+WID*j+WID*WID*k] = dfdt_mu[Vindex[i]][muindex[i]] / (2.0 * M_PI * Vmu[i]*Vmu[i]) * (CellValue[i] / fmu[Vindex[i]][muindex[i]]);}
+                   Realf ratio;
+                   for (uint i = 0; i < WID; i++) {
+                       ratio = CellValue[i] / (fmu[Vindex[i]][muindex[i]]/(2.0 * M_PI * Vmu[i] * Vmu[i]));
+                       if (ratio < 0.1) {ratio = 0.1;} else if (ratio > 10.0) {ratio = 10.0;}
+                       dfdt[WID3*n+i+WID*j+WID*WID*k] = dfdt_mu[Vindex[i]][muindex[i]] / (2.0 * M_PI * Vmu[i]*Vmu[i]) * ratio;
+                   }
 
                    Vec4d dfdtCheck;
                    dfdtCheck.load(&dfdt[WID3*n+WID*j+WID*WID*k]);
