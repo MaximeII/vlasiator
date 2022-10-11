@@ -63,11 +63,11 @@ void velocitySpaceDiffusion(
     Realf dfdt_mu[nbins_v][nbins_mu]; // Array to store dfdt_mu
 
     //TODO: to be deleted
-    std::string path_save = "/wrk-vakka/users/dubart/diff_test/speedtest/900_subCount/CFL0.1/subCount/";
-    std::ostringstream tmp;
-    tmp << std::setw(7) << std::setfill('0') << P::tstep;
-    std::string tstepString = tmp.str();
-    std::ofstream subCountFile(path_save + "subCount_" + tstepString + ".txt", std::ofstream::out | std::ofstream::app);
+    //std::string path_save = "/wrk-vakka/users/dubart/diff_test/speedtest/900_subCount/CFL0.1/subCount/";
+    //std::ostringstream tmp;
+    //tmp << std::setw(7) << std::setfill('0') << P::tstep;
+    //std::string tstepString = tmp.str();
+    //std::ofstream subCountFile(path_save + "subCount_" + tstepString + ".txt", std::ofstream::err | std::ofstream::app);
 
     const auto LocalCells=getLocalCells();
     #pragma omp parallel for private(fcount,fmu,dfdmu,dfdmu2,dfdt_mu)
@@ -261,7 +261,7 @@ void velocitySpaceDiffusion(
               
                    Vec4d normV = sqrt(Vplasma[0]*Vplasma[0] + Vplasma[1]*Vplasma[1] + Vplasma[2]*Vplasma[2]);
 
-                   Vec4d Vpara = Vplasma[0];
+                   Vec4d Vpara = Vplasma[0]*b[0] + Vplasma[1]*b[1] + Vplasma[2]*b[2];
 
                    Vec4d mu = Vpara/(normV+std::numeric_limits<Realf>::min()); // + min value to avoid division by 0
 
@@ -272,25 +272,22 @@ void velocitySpaceDiffusion(
                    #endif
                    CellValue.load(&cell.get_data(n,popID)[WID*j+WID*WID*k]);
 
-                   Vec4db lessSpars = CellValue < Sparsity;
-                   CellValue = select(lessSpars, Sparsity, CellValue);
-
                    Vec4i Vindex;
-                   Vindex = round_to_int(floor((normV-Vmin) / dVbins));
+                   Vindex  = round_to_int(floor((normV-Vmin) / dVbins));
                    Vec4i muindex;
                    muindex = round_to_int(floor((mu+1.0) / dmubins));
 
                    Vec4d Vmu = dVbins * (to_double(Vindex)+0.5);
 
-                   for (uint i = 0; i < WID; i++) {dfdt[WID3*n+i+WID*j+WID*WID*k] = dfdt_mu[Vindex[i]][muindex[i]] / (2.0 * M_PI * Vmu[i]*Vmu[i]);}
+                   for (uint i = 0; i < WID; i++) {dfdt[WID3*n+i+WID*j+WID*WID*k] = dfdt_mu[Vindex[i]][muindex[i]] / (2.0 * M_PI * Vmu[i]*Vmu[i]) * (CellValue[i] / fmu[Vindex[i]][muindex[i]]);}
+
                    Vec4d dfdtCheck;
                    dfdtCheck.load(&dfdt[WID3*n+WID*j+WID*WID*k]);
 
+                   Vec4db boolCond = (CellValue > Sparsity) && (abs(dfdtCheck) > 0.0);
                    Vec4d checkCFLTemp;                   
-
-                   Vec4db dfdtABS = abs(dfdtCheck) > 0.0;
                    
-                   checkCFLTemp = select(dfdtABS, CellValue * Parameters::PADCFL * (1.0 / abs(dfdtCheck)), std::numeric_limits<Realf>::max());
+                   checkCFLTemp = select(boolCond, CellValue * Parameters::PADCFL * (1.0 / abs(dfdtCheck)), std::numeric_limits<Realf>::max());
                    checkCFL = min(checkCFLTemp,checkCFL);
 
                    } // End coordinates 
@@ -338,9 +335,10 @@ void velocitySpaceDiffusion(
 
         //TODO: to be deleted
         std::ostringstream tmpText; 
-        tmpText << CellID << " " << subCount << std::endl;
+        tmpText << P::tstep << " " << CellID << " " << subCount << std::endl;
         std::string tmpString = tmpText.str();
-        subCountFile << tmpString;
+        std::cerr << tmpString;
+        //subCountFile << tmpString;
 
         free(dfdt);
 
