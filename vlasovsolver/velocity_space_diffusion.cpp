@@ -62,13 +62,6 @@ void velocitySpaceDiffusion(
     Realf dfdmu2 [nbins_v][nbins_mu]; // Array to store dfdmumu
     Realf dfdt_mu[nbins_v][nbins_mu]; // Array to store dfdt_mu
 
-    //TODO: to be deleted
-    //std::string path_save = "/wrk-vakka/users/dubart/diff_test/speedtest/900_subCount/CFL0.1/subCount/";
-    //std::ostringstream tmp;
-    //tmp << std::setw(7) << std::setfill('0') << P::tstep;
-    //std::string tstepString = tmp.str();
-    //std::ofstream subCountFile(path_save + "subCount_" + tstepString + ".txt", std::ofstream::err | std::ofstream::app);
-
     const auto LocalCells=getLocalCells();
     #pragma omp parallel for private(fcount,fmu,dfdmu,dfdmu2,dfdt_mu)
     for (int CellIdx = 0; CellIdx < LocalCells.size(); CellIdx++) { //Iterate through spatial cell
@@ -100,7 +93,7 @@ void velocitySpaceDiffusion(
         Realf Bnorm           = sqrt(B[0]*B[0] + B[1]*B[1] + B[2]*B[2]);
         std::array<Realf,3> b = {B[0]/Bnorm, B[1]/Bnorm, B[2]/Bnorm};
         
-        int subCount = 0; //TODO: to be deleted
+        int subCount = 0; //TODO: Delete
 
         phiprof::start("Subloop");
         while (dtTotalDiff < Parameters::dt) { // Substep loop
@@ -334,7 +327,7 @@ void velocitySpaceDiffusion(
                } // End coordinates
            } // End block
            phiprof::stop("update cell");
-           subCount += 1; //TODO: to be deleted
+           subCount += 1; //TODO: Delete
         } // End Time loop
         phiprof::stop("Subloop");
 
@@ -343,7 +336,6 @@ void velocitySpaceDiffusion(
         tmpText << P::tstep << " " << CellID << " " << subCount << std::endl;
         std::string tmpString = tmpText.str();
         std::cerr << tmpString;
-        //subCountFile << tmpString;
 
         free(dfdt);
 
