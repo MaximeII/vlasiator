@@ -92,8 +92,12 @@ void velocitySpaceDiffusion(
 
         Realf Bnorm           = sqrt(B[0]*B[0] + B[1]*B[1] + B[2]*B[2]);
         std::array<Realf,3> b = {B[0]/Bnorm, B[1]/Bnorm, B[2]/Bnorm};
-        
-        int subCount = 0; //TODO: Delete
+       
+        // TODO: Delete 
+        int subCount   = 0; 
+        Realf maxRatio = 0.0;
+        Realf minRatio = 10.0;
+ 
 
         phiprof::start("Subloop");
         while (dtTotalDiff < Parameters::dt) { // Substep loop
@@ -277,7 +281,11 @@ void velocitySpaceDiffusion(
                        ratio = CellValue[i] / (fmu[Vindex[i]][muindex[i]]/(2.0 * M_PI * Vmu[i] * Vmu[i]));
                        if (ratio < 0.1) {ratio = 0.1;} else if (ratio > 10.0) {ratio = 10.0;}
                        dfdt[WID3*n+i+WID*j+WID*WID*k] = dfdt_mu[Vindex[i]][muindex[i]] / (2.0 * M_PI * Vmu[i]*Vmu[i]) * ratio;
+                       if (ratio > maxRatio) { maxRatio = ratio; }
+                       if (ratio < minRatio) { minRatio = ratio; }
                    }
+
+                   
 
                    Vec4d dfdtCheck;
                    dfdtCheck.load(&dfdt[WID3*n+WID*j+WID*WID*k]);
@@ -333,7 +341,7 @@ void velocitySpaceDiffusion(
 
         //TODO: to be deleted
         std::ostringstream tmpText; 
-        tmpText << P::tstep << " " << CellID << " " << subCount << std::endl;
+        tmpText << P::tstep << " " << CellID << " " << subCount << " " << minRatio << " " << maxRatio << std::endl;
         std::string tmpString = tmpText.str();
         std::cerr << tmpString;
 
