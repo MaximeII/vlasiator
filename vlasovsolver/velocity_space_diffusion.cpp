@@ -263,9 +263,6 @@ void velocitySpaceDiffusion(
                    #endif
                    CellValue.load(&cell.get_data(n,popID)[WID*j+WID*WID*k]);
 
-                   Vec4db lessSpars = CellValue < Sparsity;
-                   CellValue = select(lessSpars, Sparsity, CellValue);
-
                    Vec4i Vindex;
                    Vindex = round_to_int(floor((normV-Vmin) / dVbins));
                    Vec4i muindex;
