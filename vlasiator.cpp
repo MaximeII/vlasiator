@@ -187,7 +187,12 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    Real subcycleDt;
 
    // reduce/increase dt if it is too high for any of the three propagators or too low for all propagators
-   if ((P::dt > dtMaxGlobal[0] * P::vlasovSolverMaxCFL ||
+      if (P::dt == P::dt_ceil) {
+          isChanged = false;
+          return;
+      }
+
+      if ((P::dt > dtMaxGlobal[0] * P::vlasovSolverMaxCFL ||
         P::dt > dtMaxGlobal[1] * P::vlasovSolverMaxCFL * P::maxSlAccelerationSubcycles ||
         P::dt > dtMaxGlobal[2] * P::fieldSolverMaxCFL * P::maxFieldSolverSubcycles) ||
        (P::dt < dtMaxGlobal[0] * P::vlasovSolverMinCFL &&
@@ -211,6 +216,10 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
               << writeVerbose;
 
       if (P::dynamicTimestep) {
+         if (P::dt_ceil > 0.0 && newDt > P::dt_ceil) {
+            newDt = P::dt_ceil;
+            logFile << "(TIMESTEP) However, ceiling timestep in config overrides larger dynamic dt = " << P::dt_ceil << endl << writeVerbose;
+         } 
          subcycleDt = newDt;
       } else {
          logFile << "(TIMESTEP) However, fixed timestep in config overrides dt = " << P::dt << endl << writeVerbose;
@@ -698,7 +707,11 @@ int main(int argn,char* args[]) {
       computeNewTimeStep(mpiGrid, technicalGrid, newDt, dtIsChanged);
       if (P::dynamicTimestep == true && dtIsChanged == true) {
          // Only actually update the timestep if dynamicTimestep is on
+         //if (P::dt_ceil > 0.0 && newDt > P::dt_ceil) {
+         //    P::dt=P::dt_ceil;
+         //} else {
          P::dt=newDt;
+         //}
       }
       computeDtimer.stop();
       
@@ -1047,7 +1060,13 @@ int main(int argn,char* args[]) {
             }
             
             P::dt=newDt;
-            
+
+            //if (P::dt_ceil > 0.0 && newDt > P::dt_ceil) {
+            //    P::dt=P::dt_ceil;
+            //} else {
+            //    P::dt=newDt;
+            //}
+
             logFile <<" dt changed to "<<P::dt <<"s, distribution function was half-stepped to real-time and back"<<endl<<writeVerbose;
             updateDtimer.stop();
             continue; //
